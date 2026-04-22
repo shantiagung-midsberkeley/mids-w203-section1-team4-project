@@ -1,0 +1,118 @@
+---
+title: "Results based on confirmatory dataset"
+subtitle: "A placeholder table"
+format: pdf
+execute: 
+  echo: false
+  warning: false
+  output: false
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(sandwich)
+library(lmtest)
+library(stargazer)
+```
+
+```{r}
+# load exploration dataset
+source_file <- here("data", "processed", "childcare_test.csv")
+
+df_confirm <- read_csv("C:/Users/jjmad/OneDrive/Desktop/Berkley Grad School/DS203/childcare_test.csv")
+```
+
+```{r}
+# Base models
+model_1a <- lm(log(mcinfant) ~ log(market_size), data = df_confirm)
+robust_se_1a <-  sqrt(diag(vcovHC(model_1a)))
+
+model_1b <- lm(log(mctoddler) ~ log(market_size), data = df_confirm)
+robust_se_1b <-  sqrt(diag(vcovHC(model_1b)))
+
+model_1c <- lm(log(mcpreschool) ~ log(market_size), data = df_confirm)
+robust_se_1c <-  sqrt(diag(vcovHC(model_1c)))
+```
+
+```{r}
+model1_slope = coef(model_1a)[2]
+model1b_slope = coef(model_1b)[2]
+model1c_slope = coef(model_1c)[2]
+model1_slope
+```
+
+```{r}
+market_size_value <- 1000
+
+# Step 2: Calculate predicted log(mcinfant)
+log_mcinfant_pred <- coef(model_1a)[1] + coef(model_1a)[2] * log(market_size_value)
+
+# Step 3: Exponentiate to get predicted mcinfant
+mcinfant_pred <- exp(log_mcinfant_pred)
+
+# Print the result
+round(mcinfant_pred,2)
+```
+
+The resulting coefficients showed a positive and statistically significant relationship between market size, household income and childcare costs. This holds true across infant, toddler, and preschool age child care costs. In model one, where we consider the relationship of market size to childcare price, the regression results coefficient shows that a 10% increase in market size predicts an increase in infant childcare cost by `r round(model1_slope,4)`%. This model shows that in a county with a market size of 1,000, the expected infant childcare cost would be $`r round(mcinfant_pred,2)`.
+
+
+```{r}
+# Extended models
+model_2a <- lm(log(mcinfant) ~ log(market_size) + mhi_2022, data = df_confirm)
+robust_se_2a <-  sqrt(diag(vcovHC(model_2a)))
+
+model_2b <- lm(log(mctoddler) ~ log(market_size) + mhi_2022, data = df_confirm)
+robust_se_2b <-  sqrt(diag(vcovHC(model_2b)))
+
+model_2c <- lm(log(mcpreschool) ~ log(market_size) + mhi_2022, data = df_confirm)
+robust_se_2c <-  sqrt(diag(vcovHC(model_2c)))
+```
+
+```{r}
+model2_slope = coef(model_2a)[2]
+model2b_slope = coef(model_2b)[2]
+model2c_slope = coef(model_2c)[2]
+model2_slope
+```
+
+```{r}
+market_size_value <- 1000
+mhi_2022 <- 60000
+
+# Step 2: Calculate predicted log(mcinfant)
+log_mcinfant_pred_2 <- coef(model_2a)[1] + coef(model_2a)[2] * log(market_size_value) +  coef(model_2a)[3] * mhi_2022
+
+# Step 3: Exponentiate to get predicted mcinfant
+mcinfant_pred_2 <- exp(log_mcinfant_pred_2)
+
+# Print the result
+round(mcinfant_pred_2,2)
+```
+
+In model 2, when considering median household income along with market size, it predicts an increase of `r round(model2_slope,4)`% for infant childcare price assuming that the median household income is held constant. This model shows that in a county with a market size of 1,000 households and a median household income of $60,000, the expected infant childcare cost would be $`r round(mcinfant_pred_2,2)`. 
+
+```{r}
+market_size_value <- 2000
+market_size_value_old <- 1000
+mhi_2022 <- 60000
+mhi_2022_v2 <- 50000
+
+# Step 2: Calculate predicted log(mcinfant)
+log_mcinfant_pred_2 <- coef(model_2a)[1] + coef(model_2a)[2] * log(market_size_value) +  coef(model_2a)[3] * mhi_2022
+log_mcinfant_pred_3 <- coef(model_2a)[1] + coef(model_2a)[2] * log(market_size_value_old) +  coef(model_2a)[3] * mhi_2022_v2
+log_mcinfant_pred_4 <- coef(model_2a)[1] + coef(model_2a)[2] * log(market_size_value_old) +  coef(model_2a)[3] * mhi_2022
+
+# Step 3: Exponentiate to get predicted mcinfant
+mcinfant_pred_2 <- exp(log_mcinfant_pred_2)
+mcinfant_pred_3 <- exp(log_mcinfant_pred_3)
+mcinfant_pred_4 <- exp(log_mcinfant_pred_4)
+
+# Print the result
+round(mcinfant_pred_2,2)
+```
+
+If we instead looked at a county with a market size of 2,000 and kept median household income at $60,000, then the expected infant childcare cost would be $`r round(mcinfant_pred_2,2)`.  A county with market size of 1,000 and household income of $50,000 would expect infant childcare cost to be $`r round(mcinfant_pred_3,2)`, while a county with the same market size but median household income of $60,000 would expect a price of $`r round(mcinfant_pred_4,2)`. This shows that for every $10,000 increase in median household income one could expect a 10% increase in infant childcare cost. This study shows that as market size and household income increases, we can expect an increase in childcare cost as well and it appears that childcare affordability may be tied to local economic conditions.
+
+In the case of toddler childcare price, a 10% increase in market size predicts a `r round(model1b_slope, 4)`% increase in cost, and an increase of `r round(model2b_slope,4)`% if including household income. When looking at an increase of 10% in market size as it relates to preschool care cost the model predicts an increase in cost of `r round(model1c_slope, 4)`%, and `r round(model2c_slope,4)`% when considering household income in the model.  This study shows that as market size and household income increases, we can expect an increase in childcare cost as well. 

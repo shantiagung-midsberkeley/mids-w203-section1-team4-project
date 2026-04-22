@@ -1,0 +1,283 @@
+---
+title: "Explore Model Specifications"
+format: html
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(sandwich)
+library(lmtest)
+```
+
+```{r}
+# load exploration dataset
+source_file <- here("data", "processed", "childcare_explore.csv")
+
+df <- read_csv(source_file)
+```
+
+```{r}
+glimpse(df)
+```
+
+```{r}
+df <- df |> 
+  mutate(
+    county_fips_code = as.factor(county_fips_code),
+    county_name = as.factor(county_name),
+    state_name = as.factor(state_name),
+    state_abbreviation = as.factor(state_abbreviation)
+  )
+```
+
+
+# Operationalization of childcare price
+
+```{r}
+df |> 
+  select(county_fips_code, mcinfant, mctoddler, mcpreschool) |> 
+  summary()
+```
+
+```{r}
+# create boxplot
+df |> 
+  select(county_fips_code,mcinfant, mctoddler, mcpreschool) |> 
+  pivot_longer(
+    cols = starts_with("mc"),
+    names_to = "age_groups",
+    values_to = "childcare_med_price"
+  ) |> 
+  mutate(
+    age_groups = factor(age_groups, levels = c("mcinfant", "mctoddler", "mcpreschool"))
+  ) |> 
+  ggplot(aes(x = age_groups, y = childcare_med_price, colour = age_groups)) +
+  geom_boxplot() +
+  theme(
+    legend.position = "none"
+  )
+```
+
+
+### Infant and Toddler childcare price
+
+```{r}
+t.test(df$mcinfant, df$mctoddler, paired = TRUE)
+```
+
+
+### Infant and Preschool childcare price
+
+```{r}
+t.test(df$mcinfant, df$mcpreschool, paired = TRUE)
+```
+
+### Toddler and Preschool childcare price
+
+```{r}
+t.test(df$mctoddler, df$mcpreschool, paired = TRUE)
+```
+
+# Plots: individual var
+
+## Childare price
+
+```{r}
+hist(df$mcinfant, breaks = 20)
+```
+```{r}
+hist(df$mctoddler, breaks = 20)
+```
+```{r}
+hist(df$mcpreschool, breaks = 20)
+```
+
+## Market size
+
+```{r}
+hist(df$market_size, breaks = 100 )
+```
+## Household Income
+
+```{r}
+hist(df$mhi, breaks = 75)
+```
+```{r}
+hist(df$mhi_2022, breaks = 75)
+```
+
+
+# Scatterplot: Shape of relationships
+
+## Infant childcare price and market size
+
+```{r}
+# level-level
+df |> 
+  ggplot(aes(x = market_size, y = mcinfant)) +
+  geom_point(color = "blue", alpha = 0.6)
+```
+```{r}
+# x: level, y: log (natural)
+df |> 
+  ggplot(aes(x = market_size, y = log(mcinfant))) +
+  geom_point(color = "blue", alpha = 0.6)
+```
+```{r}
+# x: log (natural), y: level
+df |> 
+  ggplot(aes(x = log(market_size), y = mcinfant)) +
+  geom_point(color = "blue", alpha = 0.6) +
+  geom_smooth(method="lm", color = "red")
+```
+```{r}
+# x: log (natural), y: log(natural)
+df |> 
+  ggplot(aes(x = log(market_size), y = log(mcinfant))) +
+  geom_point(color = "blue", alpha = 0.6) +
+  geom_smooth(method="lm", color = "red")
+```
+## Infant childcare price and household income
+
+```{r}
+# level-level
+df |> 
+  ggplot(aes(x = mhi_2022, y = mcinfant)) +
+  geom_point(color = "darkgreen", alpha = 0.6)
+```
+```{r}
+# x: level, y: log (natural)
+df |> 
+  ggplot(aes(x = mhi_2022, y = log(mcinfant))) +
+  geom_point(color = "darkgreen", alpha = 0.6) +
+  geom_smooth(method="lm", color = "red")
+```
+```{r}
+# x: log (natural), y: level
+df |> 
+  ggplot(aes(x = log(mhi_2022), y = mcinfant)) +
+  geom_point(color = "darkgreen", alpha = 0.6)
+```
+```{r}
+# x: log (natural), y: log(natural)
+df |> 
+  ggplot(aes(x = log(mhi_2022), y = log(mcinfant))) +
+  geom_point(color = "darkgreen", alpha = 0.6) +
+  geom_smooth(method="lm", color = "red")
+```
+
+
+# Models
+
+## Model 1: Base model
+
+### Model 1a: Infant
+
+```{r}
+model_1a <- lm(log(mcinfant) ~ log(market_size), data = df)
+coeftest(model_1a, vcov = vcovHC(model_1a))
+```
+
+```{r}
+plot(model_1a)
+```
+
+
+### Model 1b: Toddler
+
+```{r}
+model_1b <- lm(log(mctoddler) ~ log(market_size), data = df)
+coeftest(model_1b, vcov = vcovHC(model_1b))
+```
+
+```{r}
+plot(model_1b)
+```
+
+### Model 1c: Preschool
+
+```{r}
+model_1c <- lm(log(mcpreschool) ~ log(market_size), data = df)
+coeftest(model_1c, vcov = vcovHC(model_1c))
+```
+
+```{r}
+plot(model_1c)
+```
+
+
+## Model 2: with level-household income
+
+### Model 2a: Infant
+
+```{r}
+model_2a <- lm(log(mcinfant) ~ log(market_size) + mhi_2022, data = df)
+coeftest(model_2a, vcov = vcovHC(model_2a))
+```
+
+```{r}
+plot(model_2a)
+```
+
+### Model 2b: Toddler
+
+```{r}
+model_2b <- lm(log(mctoddler) ~ log(market_size) + mhi_2022, data = df)
+coeftest(model_2b, vcov = vcovHC(model_2b))
+```
+
+```{r}
+plot(model_2b)
+```
+
+### Model 2c: Preschool
+
+```{r}
+model_2c <- lm(log(mcpreschool) ~ log(market_size) + mhi_2022, data = df)
+coeftest(model_2c, vcov = vcovHC(model_2c))
+```
+
+```{r}
+plot(model_2c)
+```
+
+
+
+## Model 3: with log-household income
+
+### Model 3a: Infant
+
+```{r}
+model_3a <- lm(log(mcinfant) ~ log(market_size) + log(mhi_2022), data = df)
+coeftest(model_3a, vcov = vcovHC(model_3a))
+```
+
+```{r}
+plot(model_3a)
+```
+
+
+### Model 3b: Toddler
+
+```{r}
+model_3b <- lm(log(mctoddler) ~ log(market_size) + log(mhi_2022), data = df)
+coeftest(model_3b, vcov = vcovHC(model_3b))
+```
+
+```{r}
+plot(model_3b)
+```
+
+### Model 3c: Preschool
+
+```{r}
+model_3c <- lm(log(mcpreschool) ~ log(market_size) + log(mhi_2022), data = df)
+coeftest(model_3c, vcov = vcovHC(model_3c))
+```
+
+```{r}
+plot(model_3c)
+```
+
+

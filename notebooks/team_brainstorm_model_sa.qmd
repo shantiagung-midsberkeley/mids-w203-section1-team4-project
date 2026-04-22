@@ -1,0 +1,19 @@
+---
+title: "Brainstorm models"
+format: pdf
+---
+
+## Model discussed
+
+Model 1: $\mathrm{ln}(price) = \beta_0 + \beta_1 \mathrm{ln}(market\_size)$
+
+Model 2: $\mathrm{ln}(price) = \beta_0 + \beta_1 \mathrm{ln}(market\_size) + \beta_2 household\_income$
+
+Model 3: $\mathrm{ln}(price) = \beta_0 + \beta_1 \mathrm{ln}(market\_size) + \beta_2 \mathrm{log}(household\_income)$
+
+
+\
+
+$\widehat{\mathrm{ln}(weekly\_median\_childcare\_price)} = \beta_0 + \beta_1 \mathrm{ln}(market\_size)$
+
+$\widehat{\mathrm{ln}(weekly\_median\_childcare\_price)} = \beta_0 + \beta_1 \mathrm{ln}(market\_size) + \beta_2 median\_household\_income$

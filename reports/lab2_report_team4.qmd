@@ -1,0 +1,362 @@
+---
+title:  "Lab 2: Description Using Models"
+subtitle: "Childcare Prices and Market Size: A Descriptive Study of Center-Based Providers" 
+date: today
+date-format: long 
+author: 
+ - name: Jeevan Madilla 
+ - name: Perla Meza 
+ - name: Praj Prabhu
+ - name: Shanti Agung
+format: 
+  pdf: 
+    documentclass: scrartcl
+toc: false 
+colorlinks: true
+cap-locaiton: bottom
+execute: 
+  echo: false 
+  warning: false 
+  message: false 
+bibliography: references.bib
+citeproc: true
+biblio-title: References
+link-citations: true
+abstract: | 
+  Through the use of data from the National Database of Childcare Prices, this study investigates the relationship between market size, household income and childcare center prices. Our findings show a positive and statistically significant relationship between market size and childcare price across various age groups, as well as household income and childcare center prices.
+---
+
+```{r}
+library(tidyverse)
+library(patchwork)
+
+library(sandwich)
+library(stargazer)
+
+library(here)
+```
+
+
+## Introduction
+
+The target audience of this study is center-based childcare providers, also known as childcare centers. Center-based childcare providers offer care for children in non-residential, commercial settings. It includes day care centers, preschools, and prekindergartens [@tekin2021]. Center-based childcare is a widely used arrangement of non-parental care. Among children aged 0 to 5 participating in various non-parental care arrangements, 62% were enrolled in center-based care [@cui2020]. For this audience, we investigate: “Is there a relationship between market size and childcare price?” Through this study, center-based childcare providers can understand their pricing environment and any other locations they may be considering. Moreover, they can use the findings in this study to contribute to sector advocacy for affordable childcare. Childcare advocacy groups (e.g., Child Care Aware of America, ReadyNation) and state or local Departments of Social or Human Services may be more willing to collaborate with or offer support to center-based childcare providers where childcare affordability is strained. While there has not been any past study that looks solely at the relationship between market size and childcare costs, the State of Washington did a study in 2024 on childcare costs per region [@darang2023]. Specifically, it analyzed the average income of each region and the number of existing childcare centers per region.
+
+
+## Data and Methodology
+
+```{r}
+source_file <- here("data", "interim", "childcare_interim.csv")
+
+df_interim <- read_csv(source_file)
+```
+
+We use the 2022 National Database of Childcare Prices (NDCP), published by the U.S. Department of Labor [@ndcp2024]. The unit of observation is the U.S. county, and prices are reported separately for different age groups. The 2022 NDCP holds childcare data from `{r} nrow(df_interim)` different counties. Our outcome variable is the price for care in childcare centers, and the primary right-hand side variable is market size. Another right-hand side variable is the households’ income of the target market. Households’ income of the target market is likely to be of interest to childcare centers as it may reflect the buying capacity of their customers.
+
+```{r}
+# load exploration dataset
+source_file <- here("data", "processed", "childcare_explore.csv")
+df_explore <- read_csv(source_file)
+n_explore <- nrow(df_explore)
+
+# load test dataset
+source_file <- here("data", "processed", "childcare_test.csv")
+df_confirm <- read_csv(source_file)
+n_confirm <- nrow(df_confirm)
+```
+Using the 2022 NDCP dataset, we operationalized centers’ childcare prices using the weekly median price of center-based care variables. The dataset contains the weekly median price of center-based care for infants (i.e., aged 0 through 23 months), toddlers (i.e., aged 24 through 35 months), and preschoolers (i.e., aged 36 through 54 months). We used the weekly median price of center-based care for each child group as three operationalizations of price for care in childcare centers. We used distinct operationalizations for each child group because it would provide a more concrete insight into childcare centers rather than using a composite variable combining the three child groups. We operationalized market size by constructing a new variable from two variables in the NDCP dataset. The market size variable is the sum of the number of households with children under 6 years with two parents who are both working and the number of households with children under 6 with a single mother. Lastly, we operationalized the households’ income of the target market using the median household income (expressed in 2022 dollars) variable. Compiling the dataset for analysis, we excluded variables that were not relevant to the research question and its operationalization. We removed observations (counties) that have any missing values in the weekly median price of center-based care variables. We also removed observations that have the value of the market size variable of zero. The dataset for analysis comprises `{r} n_explore + n_confirm` counties. We divided the dataset into two parts: 30% for exploration (`{r} n_explore` observations) and 70% for confirmation (`{r} n_confirm` observations). 
+
+## Descriptive Models
+
+**Model specifications.** We conducted a natural log transformation on the childcare price variables and the market size variables for three reasons. In the scatterplots of untransformed variables, the data points are clustered near zero with high outliers. Additionally, the childcare price variables and the market size variables are always positive. Moreover, their distributions are skewed, as shown in Figure 2 in the Appendix. Figure 1 displays a plot of the ln(childcare price) variable for infants against the ln(market size) variable. The scatterplot suggests a linear shape of the joint distributions of the two transformed variables. We observed similar patterns for the joint distribution of the ln(childcare price) variable for toddler and ln(market size), and the joint distribution of the ln(childcare price) variable for preschool and ln(market size). Our model specifications are [^1]:
+
+Model A: $\widehat{\mathrm{ln}(weekly\_median\_childcare\_price)} = \beta_0 + \beta_1 \mathrm{ln}(market\_size)$
+
+Model B: $\widehat{\mathrm{ln}(weekly\_median\_childcare\_price)} = \beta_0 + \beta_1 \mathrm{ln}(market\_size) + \beta_2 median\_household\_income$
+
+[^1]: In Model B, we did not transform the household income variable because the scatterplot of a ln(childcare price) variable against the household income variable shows a linear pattern. Moreover, comparing the plot of residuals against fitted values for Model B with the plot of residuals against fitted values for a model using the ln-transformed household income variable suggests that the former is a better fit. 
+
+```{r}
+theme_set(theme_bw())
+
+# scatter plot
+# x: log (natural), y: log(natural)
+plot_1 <- df_confirm |> 
+  ggplot(aes(x = log(market_size), y = log(mcinfant))) +
+  geom_point(color = "#1b9e77", alpha = 0.4) +
+  geom_smooth(method="lm", color = "firebrick") +
+  labs(
+    title = "Relationship Between Market Size and Infant Childcare Prices",
+    y = "Log(Median Weekly Infant Childcare Price in USD)",
+    x = "Log(Market Size)"
+  ) +
+  theme(
+    plot.title = element_text(size = 8),
+    axis.title = element_text(size = 7),
+    axis.text = element_text(size = 7)
+  )
+
+```
+
+```{r}
+#| output: true
+#| fig-cap: A log-log scatterplot of infant childcare prices vs. market size. An increasing trend can be seen.
+#| fig-pos: t
+#| fig-height: 2.5
+#| fig-width: 3.5
+
+plot_1
+```
+
+
+**Model assumptions.** We evaluated the large sample assumptions. 
+
+*Assumption 1: I.I.D.* Neighboring counties may influence each other’s childcare pricing due to regional commuting patterns, shared labor markets, or cultural norms. For instance, in the San Francisco Bay Area, high-income families in Silicon Valley (e.g., Palo Alto, Cupertino) often drive up demand for high-quality childcare with extended hours, enrichment programs, and advanced facilities. This increased willingness to pay can spill over into neighboring counties such as Alameda or Santa Cruz, where providers may raise prices or upgrade offerings in response to regional norms and cross-county commuting. As a result, pricing in these adjacent counties is no longer independent, with spatial dependence driven by regional economic influence. In such situations, the I.I.D assumption will be violated. 
+
+*Assumption 2: A unique BLP exists.* For a BLP to exist, the  $cov[X_i, X_j]$ and $cov[X_i, Y]$ must be finite. In other words, the distributions do not have heavy tails. Figure 2 in the Appendix displays three histograms. The histogram of the median weekly infant childcare price shows the distribution is right-skewed. We observed similar patterns in the distribution of median weekly childcare prices for toddlers and preschoolers. The histogram of the market size shows a highly right-skewed distribution. The histogram of median household income resembles a normal distribution, with a slightly longer right tail. Altogether, the histogram median weekly childcare price and the histogram of market size indicate heavy tails, thus potentially infinite variances and violation of the assumption. However, in practice, they have upper bounds. For example, care centers cannot charge an infinite amount of dollars for their weekly care price, and the number of households needing care centers in a county (i.e., market size) cannot be infinite because of the limited spatial capacity of a country. For a unique BLP, it must be that there is no perfect collinearity. In the models, there is no perfect collinearity. In Model A, there is only one right-hand side variable. In Model B, the `ln(market_size)` is not a linear combination of `median_household_income`. 
+
+
+
+**Model results and interpretation.**
+
+```{r}
+# Base models
+model_1a <- lm(log(mcinfant) ~ log(market_size), data = df_confirm)
+robust_se_1a <-  sqrt(diag(vcovHC(model_1a)))
+
+model_1b <- lm(log(mctoddler) ~ log(market_size), data = df_confirm)
+robust_se_1b <-  sqrt(diag(vcovHC(model_1b)))
+
+model_1c <- lm(log(mcpreschool) ~ log(market_size), data = df_confirm)
+robust_se_1c <-  sqrt(diag(vcovHC(model_1c)))
+
+# Extended models
+model_2a <- lm(log(mcinfant) ~ log(market_size) + mhi_2022, data = df_confirm)
+robust_se_2a <-  sqrt(diag(vcovHC(model_2a)))
+
+model_2b <- lm(log(mctoddler) ~ log(market_size) + mhi_2022, data = df_confirm)
+robust_se_2b <-  sqrt(diag(vcovHC(model_2b)))
+
+model_2c <- lm(log(mcpreschool) ~ log(market_size) + mhi_2022, data = df_confirm)
+robust_se_2c <-  sqrt(diag(vcovHC(model_2c)))
+```
+
+```{r}
+#| results: asis
+#| tbl-cap: OLS Regression Results
+
+stargazer(model_1a, model_2a, model_1b, model_2b, model_1c, model_2c,
+          type = "latex",
+          title = "OLS Regression Results",
+          header = FALSE,
+          se = list(robust_se_1a, robust_se_2a, robust_se_1b, robust_se_2b, robust_se_1c, robust_se_2c),
+          dep.var.labels = c("Ln(Infant Care Price)", "Ln(Toddler Care Price)", "Ln(Preschool Care Price)"),
+          covariate.labels = c("Ln(Market Size)", "Household Income"),
+          omit.stat = c("ser"),
+          notes = "Robust standard errors in parentheses",
+          font.size = "small",
+          df = FALSE)
+```
+
+```{r}
+model1_slope = coef(model_1a)[2]
+model1b_slope = coef(model_1b)[2]
+model1c_slope = coef(model_1c)[2]
+```
+
+```{r}
+market_size_value <- 1000
+delta_mkt_size <- 10
+
+# Step 2: Calculate predicted log(mcinfant)
+log_mcinfant_pred <- coef(model_1a)[1] + coef(model_1a)[2] * log(market_size_value)
+
+# Step 3: Exponentiate to get predicted mcinfant
+mcinfant_pred <- exp(log_mcinfant_pred)
+
+new_market_size_value <- market_size_value * (1 + delta_mkt_size/100)
+new_log_mcinfant_pred <- coef(model_1a)[1] + coef(model_1a)[2] * log(new_market_size_value)
+new_mcinfant_pred <- exp(new_log_mcinfant_pred)
+
+```
+
+The resulting coefficients in Table 1 show a positive and statistically significant relationship between market size, median household income and center-based childcare prices, marked by the three asterisks indicating that their p-values are less than 0.05. This holds true across infants, toddlers, and preschoolers childcare prices. Model 1 suggests that a `{r} delta_mkt_size`% increase in market size predicts an increase in the weekly infant childcare price by `r round(model1_slope,3)*delta_mkt_size`%. According to Model 1, in a hypothetical county with a market size of `{r} market_size_value` households, the expected center-based' weekly infant childcare price would be $`{r} round(mcinfant_pred,2)`. 
+A `{r} delta_mkt_size`% increase in market size means a market size of `{r} new_market_size_value` households where the the expected weekly infant childcare price is $`{r} round(new_mcinfant_pred,2)`. 
+The $`{r} round(new_mcinfant_pred - mcinfant_pred,2) ` increase in the weekly childcare price is not a large effect size. 
+
+```{r}
+model2_slope = coef(model_2a)[2]
+model2b_slope = coef(model_2b)[2]
+model2c_slope = coef(model_2c)[2]
+```
+
+```{r}
+market_size_value <- 1000
+mhi_2022 <- 60000
+delta_mkt_size <- 10
+delta_mhi <- 10000
+
+# Step 2: Calculate predicted log(mcinfant)
+log_mcinfant_pred_2 <- coef(model_2a)[1] + coef(model_2a)[2] * log(market_size_value) +  coef(model_2a)[3] * mhi_2022
+
+# Step 3: Exponentiate to get predicted mcinfant
+mcinfant_pred_2 <- exp(log_mcinfant_pred_2)
+
+# Nested models
+anova_res <- anova(model_2a, model_1a, test="F")
+f_pval <- anova_res$`Pr(>F)`[2]
+
+```
+
+In Model 2, a `{r} delta_mkt_size`% increase in market size predicts a `r round(model2_slope,3)*delta_mkt_size`% increase in the weekly infant childcare price, holding the median household income constant. According to Model 2, in a hypothetical county with a market size of `{r} market_size_value` households and a median household income of $`{r} format(mhi_2022, scientific = FALSE, big.mark=",")`,
+the expected weekly infant childcare price would be $`r round(mcinfant_pred_2,2)`. 
+This model also shows that a $`{r} format(delta_mhi, scientific = FALSE, big.mark=",")` increase in the median household income increases weekly infant childcare price by about `{r} round(coef(model_2a)[3]*delta_mhi*100)`%, holding the market size constant. 
+Comparing Model 1 and Model 2, the addition of the median household income into the model provides substantial information about weekly infant childcare price as it is statistically significant in reducing the variability in weekly infant childcare price (*F*= `{r} round(anova_res$F[2],2)`, p-value= `{r} f_pval`).
+
+In the case of toddlers for a `{r} delta_mkt_size`% increase in market size, Model 3 shows a `r round(model1b_slope, 3)*delta_mkt_size`% increase in the weekly childcare price, and in Model 4, an increase of `r round(model2b_slope,3)*delta_mkt_size`% in the weekly childcare price holding the median household income constant. In the case of preschoolers for a `{r} delta_mkt_size`% increase in market size, Model 5 shows a `r round(model1c_slope, 3)*delta_mkt_size`% increase in the weekly childcare price, and in Model 6, an increase of `r round(model2c_slope,3)*delta_mkt_size`% in the weekly childcare price holding the median household income constant. Comparing the coefficients of `ln(market_size)` in Model 1, Model 3, and Model 5 (or in Model 2, Model 4, and Model 6), we noticed that the effect size of market size decreases as the age group increases (i.e., from infants to preschoolers). That the coefficients of `ln(market_size)` are positive may suggest that childcare is not "normal goods" since "normal goods" are characterized by the negative relationship between demand and price. Rather, childcare resembles "Veblen goods" since "Veblen goods" are characterized by positive relationship between demand and price. 
+
+
+## Discussion
+
+Our study has several limitations. One limitation is that the data is aggregated at the county level, which can introduce potential biases due to variation in county population sizes and the number of childcare providers. For instance, in counties with only one childcare center, that single provider's price sets the median for the entire county which would mean that an unusually high or low rate could skew the data. Additionally, because we weigh all counties equally in our analysis, larger counties with more providers and children have the same influence as smaller ones, potentially underrepresenting the dynamics of more populous areas. Another limitation is the mismatch between the conceptual definitions and operationalization. Firstly, the market size variable doesn’t capture households of single parents where the gender of the single parent is male. Secondly, the operationalization of household incomes of childcare centers’ target market encompasses households that are not the target market.
+
+Overall, our descriptive study shows that there is a relationship between market size and center-based childcare prices, as well as between the household income of the target market and center-based childcare prices. We found that the relationship between the natural log transformed of market size and childcare prices is linear with a positive slope. The findings also show a linear shape with a positive slope for the relationship between market size and childcare prices. While it is important not to conclude the causation of childcare prices, our study's findings could still be of great use to childcare centers looking for locations to expand. For example, the management team of childcare centers could prioritize locations with larger market sizes to reap larger profit margins because those locations tend to have higher prices. Our study also suggests that childcare affordability is not random but is instead tied to the amount of demand and local economic conditions.  Childcare centers seeking to collaborate with childcare advocacy groups could use our findings to communicate that locations with high demand and high household incomes are where childcare affordability is likely strained.
+
+
+## References
+
+::: {#refs}
+:::
+
+\newpage
+
+## Appendix
+
+**Link to data source**: https://www.dol.gov/sites/dolgov/files/WB/NDCP2022.xlsx
+
+**Model specifications that we tried:**
+We tried the model: $\widehat{\mathrm{ln}(weekly\_median\_childcare\_price)} = \beta_0 + \beta_1 \mathrm{ln}(market\_size) + \beta_2 \mathrm{ln}(median\_household\_income)$, we learned that when the distribution of the untransformed variable resembled a normal distribution, transforming the variable using natural logarithm results in worse model fit as we observed in the residual vs fitted values than the model with untransformed variable.
+
+We were curious about the effect of states and tried the model:  $\widehat{\mathrm{ln}(weekly\_median\_childcare\_price)} = \beta_0 + \beta_1 \mathrm{ln}(market\_size) + \beta_2 \mathrm{ln}(median\_household\_income) + \beta_3 state\_abbreviation$, but we encountered error message related to generating the robust standard error, so we did not get a chance to see the regression results. 
+
+
+**Plots**
+
+```{r}
+# histogram: childcare price
+plot_3 <- df_confirm |> 
+  ggplot(aes(x = mcinfant)) +
+  geom_histogram(fill="#1b9e77", color="#e9ecef") +
+  labs(
+    title = "Histogram of Median Weekly Infant Childcare Price",
+    x = "Median Weekly Price (in USD)",
+    y = "Number of Counties"
+  ) +
+  theme(plot.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8))
+```
+
+```{r}
+# histogram: market size
+plot_4 <- df_confirm |> 
+  ggplot(aes(x = market_size)) +
+  geom_histogram(binwidth = 3000, fill="#d95f02") +
+  labs(
+    title = "Histogram of County-Level Childcare Market Size",
+    x = "Market Size (in Number of Households)",
+    y = "Number of Counties"
+  ) +
+  theme(plot.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8)) +
+  scale_x_continuous(labels = scales::label_comma())
+```
+
+```{r}
+# histogram: household income
+plot_5 <- df_confirm |> 
+  ggplot(aes(x = mhi_2022)) +
+  geom_histogram(binwidth = 2500, fill="#7570b3", color="#e9ecef") +
+  labs(
+    title = "Histogram of County-Level Median Household Income",
+    x = "Median Household Income (in USD)",
+    y = "Number of Counties"
+  ) +
+  theme(plot.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8)) +
+  scale_x_continuous(labels = scales::label_comma())
+```
+
+```{r}
+#| output: true
+#| fig-cap: Histograms of the outcome and right-handside variables.
+#| fig-pos: t
+#| fig-width: 10 
+
+plot_3 | plot_4 | plot_5
+```
+
+
+```{r}
+df_confirm_extra <- df_confirm |> 
+  mutate(
+    model_2a_fitted = fitted(model_2a),
+    model_2a_residuals = resid(model_2a),
+    model_2b_fitted = fitted(model_2b),
+    model_2b_residuals = resid(model_2b),
+    model_2c_fitted = fitted(model_2c),
+    model_2c_residuals = resid(model_2c)
+  )
+```
+
+
+```{r}
+plot_model2a <- df_confirm_extra |>  
+  ggplot(aes(x = model_2a_fitted, y = model_2a_residuals)) + 
+  geom_point(color = "dodgerblue4", alpha = 0.3) +
+  labs (
+    title = "Model 2: Infants",
+    y = "Residuals",
+    x = "Fitted values"
+  ) +
+  theme(plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.text = element_text(size = 8))
+
+plot_model2b <- df_confirm_extra |>  
+  ggplot(aes(x = model_2b_fitted, y = model_2b_residuals)) + 
+  geom_point(color = "dodgerblue4", alpha = 0.3) + 
+  labs (
+    title = "Model 4: Toddlers",
+    y = "Residuals",
+    x = "Fitted values"
+  ) +
+  theme(plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.text = element_text(size = 8))
+
+plot_model2c <- df_confirm_extra |>  
+  ggplot(aes(x = model_2c_fitted, y = model_2c_residuals)) + 
+  geom_point(color = "dodgerblue4", alpha = 0.3) + 
+  labs (
+    title = "Model 6: Preschoolers",
+    y = "Residuals",
+    x = "Fitted values"
+  ) +
+  theme(plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.text = element_text(size = 8))
+```
+
+
+```{r}
+#| output: true
+#| fig-cap: Residuals vs Fitted values of Model B
+#| fig-pos: t
+#| fig-width: 11 
+
+plot_model2a | plot_model2b | plot_model2c
+```
+
+

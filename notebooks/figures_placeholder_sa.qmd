@@ -1,0 +1,151 @@
+---
+title: "Figures based on confirmation dataset"
+subtitle: "A placeholder"
+format: 
+  pdf:
+    documentclass: scrartcl
+execute: 
+  echo: false
+  warning: false
+  output: false
+---
+
+
+```{r}
+library(tidyverse)
+library(here)
+library(patchwork)
+```
+
+```{r}
+# load exploration dataset
+source_file <- here("data", "processed", "childcare_test.csv")
+
+df_confirm <- read_csv(source_file)
+```
+
+```{r}
+# create boxplot
+
+theme_set(theme_bw())
+
+color_code <- c("mcinfant" = "#1b9e77", "mctoddler" = "#d95f02", "mcpreschool" = "#7570b3")
+
+plot_1 <- df_confirm |> 
+  select(county_fips_code,mcinfant, mctoddler, mcpreschool) |> 
+  pivot_longer(
+    cols = starts_with("mc"),
+    names_to = "age_groups",
+    values_to = "childcare_med_price"
+  ) |> 
+  mutate(
+    age_groups = factor(age_groups, levels = c("mcinfant", "mctoddler", "mcpreschool"))
+  ) |> 
+  ggplot(aes(x = age_groups, y = childcare_med_price, colour = age_groups)) +
+  geom_boxplot() +
+  theme(
+    legend.position = "none",
+    axis.title.x = element_blank(),
+    plot.title = element_text(size = 8),
+    axis.title = element_text(size = 7),
+    axis.text = element_text(size = 7)
+  ) +
+  labs(
+    title = "Weekly Center-Based Childcare Prices by Age Group",
+    y = "Median Weekly Price (USD)"
+  ) +
+  scale_x_discrete(labels = c("Infants", "Toddlers", "Preschoolers")) +
+  scale_color_manual(values = color_code)
+
+plot_1
+```
+
+```{r}
+# scatter plot
+# x: log (natural), y: log(natural)
+plot_2 <- df_confirm |> 
+  ggplot(aes(x = log(market_size), y = log(mcinfant))) +
+  geom_point(color = "#1b9e77", alpha = 0.8) +
+  geom_smooth(method="lm", color = "firebrick") +
+  labs(
+    title = "Relationship Between Market Size and Infant Childcare Prices",
+    y = "Log(Median Weekly Infant Childcare Price in USD)",
+    x = "Log(Market Size)"
+  ) +
+  theme(
+    plot.title = element_text(size = 8),
+    axis.title = element_text(size = 7),
+    axis.text = element_text(size = 7)
+  )
+
+plot_2
+```
+
+```{r}
+#| output: true
+#| fig-cap: A boxplot of center-based childcare prices by age group, and a log-log scatterplot of infant childcare prices vs. market size.
+#| fig-pos: t
+#| fig-width: 8 
+
+plot_1 | plot_2
+```
+
+```{r}
+# histogram: childcare price
+plot_3 <- df_confirm |> 
+  ggplot(aes(x = mcinfant)) +
+  geom_histogram(fill="#1b9e77", color="#e9ecef") +
+  labs(
+    title = "Histogram of Median Weekly Infant Childcare Price",
+    x = "Median Weekly Price (in USD)",
+    y = "Number of Counties"
+  ) +
+  theme(plot.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8))
+plot_3
+```
+
+```{r}
+# histogram: market size
+plot_4 <- df_confirm |> 
+  ggplot(aes(x = market_size)) +
+  geom_histogram(binwidth = 3000, fill="#d95f02") +
+  labs(
+    title = "Histogram of County-Level Childcare Market Size",
+    x = "Market Size (in Number of Households)",
+    y = "Number of Counties"
+  ) +
+  theme(plot.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8)) +
+  scale_x_continuous(labels = scales::label_comma())
+plot_4
+```
+
+```{r}
+# histogram: household income
+plot_5 <- df_confirm |> 
+  ggplot(aes(x = mhi_2022)) +
+  geom_histogram(binwidth = 2500, fill="#7570b3", color="#e9ecef") +
+  labs(
+    title = "Histogram of County-Level Median Household Income",
+    x = "Median Household Income (in USD)",
+    y = "Number of Counties"
+  ) +
+  theme(plot.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8)) +
+  scale_x_continuous(labels = scales::label_comma())
+plot_5
+```
+
+```{r}
+#| output: true
+#| fig-cap: Histograms of outcome and right-handside variables.
+#| fig-pos: t
+#| fig-width: 10 
+
+plot_3 | plot_4 | plot_5
+```
+

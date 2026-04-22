@@ -1,0 +1,65 @@
+---
+title: "Results based on exploration dataset"
+subtitle: "A placeholder table"
+format: pdf
+execute: 
+  echo: false
+  warning: false
+  output: false
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(sandwich)
+library(lmtest)
+library(stargazer)
+```
+
+```{r}
+# load exploration dataset
+source_file <- here("data", "processed", "childcare_explore.csv")
+
+df <- read_csv(source_file)
+```
+
+```{r}
+# Base models
+model_1a <- lm(log(mcinfant) ~ log(market_size), data = df)
+robust_se_1a <-  sqrt(diag(vcovHC(model_1a)))
+
+model_1b <- lm(log(mctoddler) ~ log(market_size), data = df)
+robust_se_1b <-  sqrt(diag(vcovHC(model_1b)))
+
+model_1c <- lm(log(mcpreschool) ~ log(market_size), data = df)
+robust_se_1c <-  sqrt(diag(vcovHC(model_1c)))
+```
+
+```{r}
+# Extended models
+model_2a <- lm(log(mcinfant) ~ log(market_size) + mhi_2022, data = df)
+robust_se_2a <-  sqrt(diag(vcovHC(model_2a)))
+
+model_2b <- lm(log(mctoddler) ~ log(market_size) + mhi_2022, data = df)
+robust_se_2b <-  sqrt(diag(vcovHC(model_2b)))
+
+model_2c <- lm(log(mcpreschool) ~ log(market_size) + mhi_2022, data = df)
+robust_se_2c <-  sqrt(diag(vcovHC(model_2c)))
+```
+
+```{r}
+#| results: asis
+
+stargazer(model_1a, model_2a, model_1b, model_2b, model_1c, model_2c,
+          type = "latex",
+          title = "OLS Regression Results",
+          header = FALSE,
+          se = list(robust_se_1a, robust_se_2a, robust_se_1b, robust_se_2b, robust_se_1c, robust_se_2c),
+          dep.var.labels = c("Log(Infant Care Price)", "Log(Toddler Care Price)", "Log(Preschool Care Price)"),
+          covariate.labels = c("Log(Market Size)", "Household Income"),
+          omit.stat = c("ser", "f"),
+          notes = "Robust standard errors in parentheses",
+          font.size = "small")
+
+```
+
