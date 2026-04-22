@@ -47,8 +47,11 @@ This analysis can help childcare providers and policy audiences better understan
 
 ## Team Contributions
 - **Jeevan Madilla**: Contributed to project conceptualization; contributed to model review and discussion; conducted statistical analysis; wrote the model results and interpretation, limitations, and discussion sections; and reviewed the report.
+
 - **Perla Meza**: Contributed to project conceptualization; contributed to model review and discussion; wrote the introduction and the model results and interpretation section; and reviewed the report.
+
 - **Praj Prabhu**: Contributed to project conceptualization; contributed to model review and discussion; and wrote the model assumptions section.
+
 - **Shanti Agung**: Contributed to project conceptualization; led data cleaning and preprocessing; built the models and contributed to model review and discussion; conducted statistical analysis; wrote the data and methodology and limitations sections; and reviewed and edited the report.
 
 ## Repository Structure
